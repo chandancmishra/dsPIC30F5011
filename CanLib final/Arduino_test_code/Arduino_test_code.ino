@@ -42,6 +42,6 @@ void loop()
     }
     delay(100);
 
-    CAN.sendMsgBuf(0x00, 0, 8, stmp);
+    CAN.sendMsgBuf(0x18ffee00, 1, 8, stmp);
     delay(100);
 }
