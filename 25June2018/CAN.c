@@ -22,6 +22,86 @@ void CAN1SetFilter(char, unsigned int, unsigned long)
 void CAN1SendMessage(unsigned int, unsigned long , unsigned char*, unsigned char,char);
 void CAN1ReceiveMessage(unsigned char * , unsigned char,char);
 */
+
+
+  /*************************************************************************
+  * Function Name : PWM_init
+  * Description   : Initializes the timers, sets PORTD as output
+  * Parameters    : Pointer to structure CANMSG defined in can.h
+  * Returns       : True if message received else False.
+  **************************************************************************/
+
+  void PWM_init(float period)
+  {
+
+  	TRISD = 0b1100001111000000;
+
+  //	period = 30e6 / frequency;
+
+  		// Configure Timers 2 & 3
+  		PR2 = period - 1;      // Set Timer 2 period for 50kHz
+      PR3 = period - 1;      // Set Timer 3 period for 50kHz
+      T2CONbits.TCKPS = 0;   // 1:1 prescale
+      T3CONbits.TCKPS = 0;   // 1:1 prescale
+      TMR2 = period / 4;     // Timer 2 leads Timer 3 by 25% of period.
+  		TMR3 = period / 2;     // Timer 3 lags Timer 2 by 25% of period. Give it a "head start" of 1 because Timer3 is enabled just after Timer2
+
+  		T2CONbits.TON = 1;
+  		T3CONbits.TON = 1;
+  		// Select timer for each channel
+  		OC3CONbits.OCTSEL = 0; // OC1 driven by Timer 2
+  		OC4CONbits.OCTSEL = 1; // OC2 driven by Timer 3
+  		OC5CONbits.OCTSEL = 0; // OC3 driven by Timer 2
+  		OC6CONbits.OCTSEL = 1; // OC4 driven by Timer 3
+
+
+  }
+  /*************************************************************************
+  * Function Name : PWM_start
+  * Description   : 	rates the PWM of given dutycycle and period at
+                    desired pin
+
+  * Parameters    : dytycycle in percetage,period,and pin number
+  **************************************************************************/
+
+  void PWM_generate(float dutycycle,float period,int pin)
+  {
+
+    //int pulse, space;//, period;   // pulse width, space width, period
+    //period = 30e6 / frequency;               // f_m = 30e6 / 600 = 50 kHz
+  //  pulse = dutycycle * period; // width of PWM pulses
+  //  space = period - pulse;     // gap between PWM pulses
+
+  	if(pin==5)
+  	{
+  		OC3CONbits.OCM = 0b101;
+  		OC3R = 0;     // pulse start time
+  		OC3RS = dutycycle * period / 100;   // pulse end time
+  	}
+  	else if(pin==6)
+  	{
+  		OC4CONbits.OCM = 0b101;
+  		OC4R = 0;       // pulse start time
+    	OC4RS = dutycycle * period / 100;   // pulse end time
+  	}
+  	else if(pin==7)
+  	{
+  		OC5CONbits.OCM = 0b101;
+  		OC5R = 0;       // pulse start time (start of gap in PWM3)
+    	OC5RS = dutycycle * period / 100;   // pulse end time (end of gap in PWM3)
+  	}
+  	else if(pin==8)
+  	{
+  		OC6CONbits.OCM = 0b101;
+  		OC6R = 0;       // pulse start time (start of gap in PWM4)
+    	OC6RS = dutycycle * period / 100;   // pulse end time (end of gap in PWM4)
+  	}
+  }
+
+
+
+
+
 typedef struct
   {
   uint32_t eid;
@@ -29,14 +109,14 @@ typedef struct
   uint8_t data[8];
   }CANMSG;
 
-void delay_ms(unsigned int delay)
+/*void delay_ms(unsigned int delay)
 {
   unsigned int i,j;
   for(i=0;i<delay;i++)
   {
   for(j=0;j<1275;j++);
   }
-}
+}*/
 void ConfigIntCAN1(unsigned int config1, unsigned int config2)
 {
     C1INTF = 0;                          /* the individual flag register cleared */
@@ -277,7 +357,7 @@ void CAN1ReceiveMessage(CANMSG *message, unsigned char  datalen,char MsgFlag)
             var = SID;
             EID = (EID << 6);
             var = var | EID;
-            DLC = DLC >> 11;
+            DLC = DLC >> 10;
             var = var | DLC;
             message->eid = var;
             message->length = C1RX0DLCbits.DLC;
@@ -295,7 +375,7 @@ void CAN1ReceiveMessage(CANMSG *message, unsigned char  datalen,char MsgFlag)
             var = SID;
             EID = (EID << 6);
             var = var | EID;
-            DLC = DLC >> 11;
+            DLC = DLC >> 10;
             var = var | DLC;
             message->eid = var;
             message->length = C1RX1DLCbits.DLC;
@@ -358,18 +438,19 @@ void CAN1Initialize(unsigned int config1, unsigned int config2)
 
 //unsigned char *data;
 //unsigned char data1[]={1,2,2,2,2,2,2,2};
-CANMSG msg1,msg2,msg3,msg4;
+CANMSG msg,CoolTemp,EngSpeed;
 int main(){
-
+float dtc;
 TRISF=0xFD;
 C1CTRLbits.REQOP=4;
 while(C1CTRLbits.OPMODE != 4){
     ;
     }
 
-//CAN1SetFilter('3',0b11000111111,0b101110111000000000);
-CAN1SetFilter('3',0b11000111111,0b101110111000000000);
-
+//CAN1SetFilter('1',0b1100111100,0b10000000000);
+CAN1SetFilter('0',0b11000111111,0b101110111000000000);
+//CAN1SetMask('0',0x7FF,0x3FFFF);
+//CAN1SetMask('1',0x7FF,0x3FFFF);
 CAN1SetMask('0',0,0);
 C1CFG1=0x0000;
 C1CFG2=0x0086;
@@ -385,19 +466,28 @@ C1CFG2=0x0086;
 
 ConfigIntCAN1(0x00FF,0);
 C1CTRLbits.REQOP=0;
-
 while(C1CTRLbits.OPMODE != 0){
     ;
     }
 
 
+
+
+PWM_init(600);
+
 while(1){
+int i;
 
+	
+dtc=(float)CoolTemp.data[1];
+   	PWM_generate(dtc,600.0,7);
 
-
+	
       CAN1ReceiveMessage(&msg,8,0);
-      delay_ms(100);
-      /*if(C1RX0CONbits.RXFUL)
+      //delay_ms(100);
+  //    for(i=0;i<100;i++);
+
+		/*if(C1RX0CONbits.RXFUL)
       {C1RX0CONbits.DBEN=1;}
       */
       // C1RX0B1 = 0;
@@ -408,11 +498,25 @@ while(1){
       // C1RX1B2 = 0;
       // C1RX1B3 = 0;
       // C1RX1B4 = 0;
+if(msg.eid == 0x18feee00)
+	      {
+			CoolTemp = msg;
+			continue;
+			}
+else if (msg.eid == 0x0cf00400)
+			{
+			EngSpeed = msg;
+			continue;
+			}
+      for(i=0;i<100;i++);
 
-      delay_ms(100);
       //CAN1SendMessage(0b101110111000000000,0b11000111111,&data, 8,1);
-      delay_ms(100);
-        }
+    //      for(i=0;i<100;i++);
+dtc=(float)CoolTemp.data[1];
+   	PWM_generate(dtc,600.0,7);
+
+	
+	}
 
 return 0;
 }
