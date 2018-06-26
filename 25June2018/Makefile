@@ -1,0 +1,23 @@
+# MPLAB IDE generated this makefile for use with GNU make.
+# Project: test_1.mcp
+# Date: Mon Jun 25 14:51:32 2018
+
+AS = pic30-as.exe
+CC = pic30-gcc.exe
+LD = pic30-ld.exe
+AR = pic30-ar.exe
+HX = pic30-bin2hex.exe
+RM = rm
+
+test_1.hex : test_1.cof
+	$(HX) "test_1.cof"
+
+test_1.cof : CAN.o
+	$(CC) -mcpu=30F5011 "CAN.o" -o"test_1.cof" -Wl,-Tp30F5011.gld,--defsym=__MPLAB_BUILD=1,--defsym=__MPLAB_DEBUG=1,-Map="test_1.map",--report-mem
+
+CAN.o : c:/program\ files\ (x86)/microchip/mplab\ c30/support/dsPIC30F/h/p30F5011.h c:/program\ files\ (x86)/microchip/mplab\ c30/support/dsPIC30F/h/p30fxxxx.h c:/program\ files\ (x86)/microchip/mplab\ c30/support/dsPIC30F/h/p30F5011.h c:/program\ files\ (x86)/microchip/mplab\ c30/support/dsPIC30F/h/p30fxxxx.h c:/program\ files\ (x86)/microchip/mplab\ c30/support/peripheral_30F_24H_33F/can.h CAN.c
+	$(CC) -mcpu=30F5011 -x c -c "CAN.c" -o"CAN.o" -D__DEBUG -g -Wall
+
+clean : 
+	$(RM) "CAN.o" "test_1.cof" "test_1.hex"
+
